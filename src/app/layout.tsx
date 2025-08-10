@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Lato } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { TanstackProviders } from "@/providers/query-client-providers";
 
 const lato = Lato({
   variable: "--font-lato",
@@ -25,14 +26,16 @@ export default function RootLayout({
         className={`${lato.variable}  antialiased`}
         suppressHydrationWarning
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <TanstackProviders>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </TanstackProviders>
       </body>
     </html>
   );

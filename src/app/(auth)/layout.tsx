@@ -1,4 +1,4 @@
-import { DarkModeToggle } from "@/components/common/DarkModeToggle";
+import { DarkModeToggle } from "@/components/common/dark-mode-toggle";
 import React, { ReactNode } from "react";
 
 interface LayoutProps {

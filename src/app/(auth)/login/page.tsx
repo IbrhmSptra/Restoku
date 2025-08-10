@@ -14,19 +14,18 @@ import { useTheme } from "next-themes";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginFormType, loginSchema } from "@/lib/zod/login-validation";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { FormInput } from "@/components/common/form-input";
+import z from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { LoginAction } from "@/api/auth";
+import { LoaderCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const Login = () => {
   const { theme } = useTheme();
+  const router = useRouter();
   const form = useForm<loginFormType>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -34,13 +33,26 @@ const Login = () => {
       password: "",
     },
   });
-  const onSubmit = () => {
-    console.log(form.getValues);
+  const loginMutation = useMutation({
+    mutationKey: ["login"],
+    mutationFn: (formdata: FormData) => LoginAction(formdata),
+    onSuccess: () => {
+      router.refresh();
+    },
+  });
+  const onSubmit = (values: z.infer<typeof loginSchema>) => {
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    loginMutation.mutate(formData);
   };
+  console.log(loginMutation.data);
+
   return (
-    <div className="max-h-svh w-full container mx-auto flex items-center justify-center px-4 lg:px-56 lg:py-56">
-      <div className="flex w-full min-h-svh lg:min-h-0  justify-center">
-        <div className="flex-1/2 rounded-tl-xl rounded-bl-xl overflow-hidden hidden lg:block bg-red-400">
+    <div className="min-h-svh w-full container mx-auto flex items-center justify-center px-4">
+      <div className="flex w-full min-h-svh justify-center lg:max-h-96 lg:max-w-2xl lg:min-h-0">
+        <div className="flex-1/2 rounded-tl-xl rounded-bl-xl overflow-hidden hidden lg:block ">
           <Image
             src={theme == "light" ? logoLight : logoDark}
             alt="Restoku Logo"
@@ -54,43 +66,35 @@ const Login = () => {
               Input your credentials to login at Restoku
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-full">
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
+                className=" h-full flex flex-col justify-between gap-y-6"
               >
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="xxxx@gmail.com" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-4">
+                  <FormInput
+                    form={form}
+                    name="email"
+                    label="Email"
+                    placeholder="xxxx@gmail.com"
+                  />
+                  <FormInput
+                    form={form}
+                    name="password"
+                    label="Password"
+                    placeholder="*******"
+                    type="password"
+                  />
+                </div>
+
+                <Button type="submit">
+                  {loginMutation.isPending ? (
+                    <LoaderCircle className="animate-spin" />
+                  ) : (
+                    "Login"
                   )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="*******"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit">Login</Button>
+                </Button>
               </form>
             </Form>
           </CardContent>
