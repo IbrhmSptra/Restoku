@@ -22,6 +22,11 @@ import { useMutation } from "@tanstack/react-query";
 import { LoginAction } from "@/api/auth";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { loginResponse } from "@/types/auth";
+import { clearAllCookies } from "@/hooks/clearAllCookies";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
+import { ShieldX } from "lucide-react";
 
 const Login = () => {
   const { theme } = useTheme();
@@ -36,7 +41,18 @@ const Login = () => {
   const loginMutation = useMutation({
     mutationKey: ["login"],
     mutationFn: (formdata: FormData) => LoginAction(formdata),
-    onSuccess: () => {
+    onSuccess: (value: loginResponse) => {
+      if (value.error) {
+        toast("Something Wrong", {
+          icon: <ShieldX color="red" />,
+          description:
+            typeof value.message === "string"
+              ? value.message
+              : JSON.stringify(value.message),
+        });
+        // clearAllCookies();
+        // return;
+      }
       router.refresh();
     },
   });
@@ -51,6 +67,7 @@ const Login = () => {
 
   return (
     <div className="min-h-svh w-full container mx-auto flex items-center justify-center px-4">
+      <Toaster />
       <div className="flex w-full min-h-svh justify-center lg:max-h-96 lg:max-w-2xl lg:min-h-0">
         <div className="flex-1/2 rounded-tl-xl rounded-bl-xl overflow-hidden hidden lg:block ">
           <Image
