@@ -1,73 +1,73 @@
 "use server";
+
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/zod/login-validation";
-import { loginResponse } from "@/types/auth";
-import { cookies } from "next/headers";
+import { AuthFormState } from "@/types/auth";
 
-export async function LoginAction(formData: FormData): Promise<loginResponse> {
-  // check if theres no formData given return error true
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export async function login(
+  prevState: AuthFormState,
+  formData: FormData | null
+) {
   if (!formData) {
     return {
-      error: true,
-      message: "Please fill requiered fields",
-    };
-  }
-
-  // validate formData to align with schema login
-  const validateFields = loginSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-  if (!validateFields.success) {
-    return {
-      error: true,
-      message: {
-        email: validateFields.error.flatten().fieldErrors.email ?? [],
-        password: validateFields.error.flatten().fieldErrors.password ?? [],
+      status: "idle",
+      errors: {
+        email: [],
+        password: [],
+        _form: [],
       },
     };
   }
 
-  // signin with password
-  const supabase = await createClient({});
-  const {
-    data: { user },
-    error: errorAuth,
-  } = await supabase.auth.signInWithPassword({
-    email: validateFields.data.email,
-    password: validateFields.data.password,
+  const validatedFields = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
   });
-  if (errorAuth) {
+
+  if (!validatedFields.success) {
     return {
-      error: true,
-      message: errorAuth.message,
+      status: "error",
+      errors: validatedFields.error.flatten().fieldErrors,
     };
   }
 
-  //get profiles
-  const { data: profile, error: errorProfile } = await supabase
+  const supabase = await createClient({});
+
+  const {
+    error,
+    data: { user },
+  } = await supabase.auth.signInWithPassword(validatedFields.data);
+
+  if (error) {
+    return {
+      status: "error",
+      errors: {
+        ...prevState.errors,
+        _form: [error.message],
+      },
+    };
+  }
+
+  const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user?.id)
     .single();
-  if (errorProfile) {
-    return {
-      error: true,
-      message: errorProfile.message,
-    };
+
+  if (profile) {
+    const cookiesStore = await cookies();
+    cookiesStore.set("user_profile", JSON.stringify(profile), {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
   }
 
-  // set cookies
-  const cookieStore = await cookies();
-  cookieStore.set("user_profile", JSON.stringify(profile), {
-    httpOnly: true,
-    path: "/",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-
-  return {
-    error: false,
-    message: "Login successful",
-  };
+  revalidatePath("/", "layout");
+  redirect("/");
 }

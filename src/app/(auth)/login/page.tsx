@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import React from "react";
+import React, { startTransition, useActionState, useEffect } from "react";
 import logoDark from "../../../../public/restoku-logo-dark.png";
 import logoLight from "../../../../public/restoku-logo-light.png";
 import Image from "next/image";
@@ -18,14 +18,11 @@ import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/common/form-input";
 import z from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { LoginAction } from "@/api/auth";
 import { LoaderCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { login } from "@/api/auth";
 
 const Login = () => {
   const { theme } = useTheme();
-  const router = useRouter();
   const form = useForm<loginFormType>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -33,21 +30,36 @@ const Login = () => {
       password: "",
     },
   });
-  const loginMutation = useMutation({
-    mutationKey: ["login"],
-    mutationFn: (formdata: FormData) => LoginAction(formdata),
-    onSuccess: () => {
-      router.refresh();
+
+  const [loginState, loginAction, isPendingLogin] = useActionState(login, {
+    status: "idle",
+    errors: {
+      email: [],
+      password: [],
+      _form: [],
     },
   });
+
   const onSubmit = (values: z.infer<typeof loginSchema>) => {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => {
       formData.append(key, value);
     });
-    loginMutation.mutate(formData);
+
+    startTransition(() => {
+      loginAction(formData);
+    });
   };
-  console.log(loginMutation.data);
+
+  useEffect(() => {
+    if (loginState?.status === "error") {
+      startTransition(() => {
+        loginAction(null);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loginState]);
+  console.log(loginState.errors);
 
   return (
     <div className="min-h-svh w-full container mx-auto flex items-center justify-center px-4">
@@ -89,7 +101,7 @@ const Login = () => {
                 </div>
 
                 <Button type="submit">
-                  {loginMutation.isPending ? (
+                  {isPendingLogin ? (
                     <LoaderCircle className="animate-spin" />
                   ) : (
                     "Login"
