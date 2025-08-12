@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { ShieldX } from "lucide-react";
 
-const Login = () => {
+export default function Login() {
   const { theme } = useTheme();
   const router = useRouter();
   const form = useForm<loginFormType>({
@@ -50,8 +50,8 @@ const Login = () => {
               ? value.message
               : JSON.stringify(value.message),
         });
-        // clearAllCookies();
-        // return;
+        clearAllCookies();
+        return;
       }
       router.refresh();
     },
@@ -119,6 +119,4 @@ const Login = () => {
       </div>
     </div>
   );
-};
-
-export default Login;
+}
